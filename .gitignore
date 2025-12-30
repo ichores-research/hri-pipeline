@@ -19,3 +19,5 @@ data
 *.pth
 *.pt
 *.py[cod]
+
+.env

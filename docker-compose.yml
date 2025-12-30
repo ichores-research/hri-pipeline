@@ -1,0 +1,112 @@
+version: "3.4"
+
+x-common-env: &common_env
+  ROS_IP: ${ROS_IP:-127.0.0.1}
+  ROS_MASTER_URI: ${ROS_MASTER_URI:-http://127.0.0.1:11311}
+  DISPLAY: ${DISPLAY:-:0}
+  QT_X11_NO_MITSHM: "1"
+
+x-common-runtime: &common_runtime
+  privileged: true
+  network_mode: "host"
+  stdin_open: true
+  tty: true
+
+x-common-volumes-x11: &common_volumes_x11
+  - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+services:
+  detection:
+    <<: *common_runtime
+    image: detection
+    runtime: "nvidia"
+    build:
+      context: .
+      dockerfile: ./compose/detection_pipe/dockerfile
+    env_file:
+      - ./.env
+    environment:
+      <<: *common_env
+      DATASET: ${DATASET}
+      CONFIG: ${CONFIG}
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - *common_volumes_x11
+      - ./compose/detection_pipe:/root/task
+      - ./config:/root/config
+      - ./data/datasets:/root/task/datasets:rw
+    command: >
+      bash -lc "source catkin_ws/devel/setup.bash;
+      rosparam load /root/config/${CONFIG} /pose_estimator;
+      python /root/task/test_obj_det_dev.py"
+
+  melodic_bridge:
+    <<: *common_runtime
+    image: tiago_melodic:v2
+    container_name: melodic_bridge
+    runtime: "nvidia"
+    build:
+      context: ./compose/r_melodic
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      <<: *common_env
+      NVIDIA_DRIVER_CAPABILITIES: "all"
+      NVIDIA_VISIBLE_DEVICES: "all"
+      LIBGL_ALWAYS_INDIRECT: "1"
+    volumes:
+      - *common_volumes_x11
+      # (Fixed direction + made it read-only)
+      - ./compose/r_melodic/entrypoint.sh:/entrypoint.sh:ro
+      - ./src/r_melodic_ws:/tiago_dual_public_ws/src/user_packages
+    working_dir: /tiago_dual_public_ws
+    command: rosrun bridge_noetic_melodic bridge_noetic_melodic.py
+
+  noetic:
+    <<: *common_runtime
+    image: noetic
+    container_name: noetic
+    build:
+      context: ./compose/r_noetic
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      <<: *common_env
+    volumes:
+      - *common_volumes_x11
+      - ./src/r_noetic_ws:/tiago_dual_public_ws/src/user_packages
+    command: bash
+
+  mic_handling:
+    <<: *common_runtime
+    image: mic_noetic
+    container_name: mic_handling
+    runtime: "nvidia"
+    build:
+      context: ./compose/mic_handling
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      <<: *common_env
+    volumes:
+      - *common_volumes_x11
+      - ./src/input_handling:/tiago_dual_public_ws/src/user_packages
+    command: bash
+
+  ros2:
+    <<: *common_runtime
+    image: ros2
+    container_name: ros2
+    build:
+      context: ./compose/r_ros2
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+    volumes:
+      - ./src/r_ros2_ws:/ros2_ws/src/user_packages
+    command: bash
