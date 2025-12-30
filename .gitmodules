@@ -1,0 +1,6 @@
+[submodule "lib/gdrnpp_bop2022"]
+	path = lib/gdrnpp_bop2022
+	url = https://github.com/hoenigpeter/gdrnpp_bop2022.git
+[submodule "lib/yolov8_ros"]
+	path = lib/yolov8_ros
+	url = https://github.com/hoenigpeter/yolov8_ros.git
