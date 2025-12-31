@@ -21,3 +21,5 @@ data
 *.py[cod]
 
 .env
+recordings/
+*tiago*

@@ -1,0 +1,5 @@
+<launch>
+  <rosparam file="$(find input_handling)/config/input_handling_params.yaml" command="load"/>
+  <node pkg="input_handling" type="mic_publisher_node.py" name="mic_publisher" output="screen"/>
+  <node pkg="input_handling" type="mic_analyzer_node.py" name="mic_analyzer" output="screen"/>
+</launch>

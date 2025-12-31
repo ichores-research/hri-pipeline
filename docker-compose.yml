@@ -1,4 +1,4 @@
-version: "3.4"
+version: "2.4"
 
 x-common-env: &common_env
   ROS_IP: ${ROS_IP:-127.0.0.1}
@@ -12,8 +12,7 @@ x-common-runtime: &common_runtime
   stdin_open: true
   tty: true
 
-x-common-volumes-x11: &common_volumes_x11
-  - /tmp/.X11-unix:/tmp/.X11-unix:rw
+x-common-volumes-x11: &common_volumes_x11 "/tmp/.X11-unix:/tmp/.X11-unix:rw"
 
 services:
   detection:
@@ -85,7 +84,7 @@ services:
     container_name: mic_handling
     runtime: "nvidia"
     build:
-      context: ./compose/mic_handling
+      context: ./compose/r_noetic
       dockerfile: Dockerfile
     env_file:
       - ./.env

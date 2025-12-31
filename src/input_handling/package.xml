@@ -1,0 +1,21 @@
+<package format="2">
+  <name>input_handling</name>
+  <version>1.0.0</version>
+  <description>Package with nodes: Microphone analyzer, Deictic buffer and Fusion (NLP+Gestures sentence)</description>
+  <author email="work.dratva@pm.me">Simon Dratva</author>
+  <maintainer email="michal.vavrecka@cvut.cz">Michal Vavrecka</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_runtime</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>audio_common_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+
+  <exec_depend>rospy</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>audio_common_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <export></export>
+</package>

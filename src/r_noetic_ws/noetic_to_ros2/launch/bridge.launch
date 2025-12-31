@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="noetic_to_ros2" type="zmq_rs_publisher.py" name="zmq_rs_publisher" output="screen" />
+  <node pkg="noetic_to_ros2" type="zmq_tf_publisher.py" name="zmq_tf_publisher" output="screen" />
+  <node pkg="noetic_to_ros2" type="zmq_gdrnet_publisher.py" name="zmq_gdrnet_publisher" output="screen" />
+  <node pkg="noetic_to_ros2" type="zmq_hri_subscriber.py" name="zmq_hri_subscriber" output="screen" />
+</launch>
+

@@ -31,15 +31,15 @@ cp -r train10/weights/last.pt ./data/weights/yolov8/ycb_ichores.pt
 rm -r train10 ycb_ichores/yolov8_weights
 
 cp -r ycb_ichores/gdrn_weight/model_final.pth ./data/weights/gdrnpp/gdrnpp_ycb_ichores_weights.pth
-rm -r ycb_ichores/gdrn_weight 
+rm -r ycb_ichores/gdrn_weight
 
 cp -r ycb_ichores/models ./data/datasets/ycb_ichores/models
-rm -r ycb_ichores/models 
+rm -r ycb_ichores/models
 
 cp -r ycb_ichores/grasp_annotations ./data/datasets/ycb_ichores/grasp_annotations
 rm -r ycb_ichores/grasp_annotations
 
 rm -r ycb_ichores.zip ycb_ichores
 
-bash ./src/grounded_sam2_ros/checkpoints/download_ckpts.sh
-bash ./src/grounded_sam2_ros/gdino_checkpoints/download_ckpts.sh
+# bash ./lib/grounded_sam2_ros/checkpoints/download_ckpts.sh
+# bash ./lib/grounded_sam2_ros/gdino_checkpoints/download_ckpts.sh

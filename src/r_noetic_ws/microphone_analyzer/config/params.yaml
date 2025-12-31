@@ -1,0 +1,13 @@
+vad_stt:
+  input_sample_rate: 48000
+  vad_sample_rate: 16000
+  frame_ms: 30
+  vad_mode: 2
+  prebuffer_seconds: 1.0
+  hang_in_ms: 50
+  hang_out_ms: 2000
+  min_speech_ms: 200
+  merge_gap_ms: 2000
+  num_channels: 1
+  recordings_path: recordings
+  audio_topic: '/audio/raw_andrea'

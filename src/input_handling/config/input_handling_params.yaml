@@ -1,0 +1,28 @@
+mic_analyzer:
+  # shared
+  input_sample_rate: 48000
+  num_channels: 2
+  format: "S16_LE"
+  # publisher
+  device_id: "(hw:0,0)"
+  chunk_size: 2048
+  audio_topic: '/audio/raw_dji'
+  # analyzer
+  use_gpu: false
+  vad_sample_rate: 16000
+  frame_ms: 30
+  vad_mode: 3
+  prebuffer_s: 1.0
+  hang_in_ms: 200
+  hang_out_ms: 2000
+  min_speech_ms: 200
+  merge_gap_ms: 2000
+  recordings_path: 'recordings'
+  
+
+deictic_buffer:
+  param_1: 0.0
+
+fusion:
+  param_2: 0.0
+  
