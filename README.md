@@ -4,6 +4,13 @@ Human-robot interaction pipeline for humanoid robot in a simple household enviro
 Implemented in ROS, uses docker containers.
 Motor control is designed for the Tiago robot but can be adapted to other robots.
 
+
+## Requirements
+
+Developed and tested on Ubuntu 20.04.
+
+> [Docker](https://www.docker.com/) is needed for execution.
+
 ## Installation
 
 Simply clone the repository.
@@ -33,3 +40,25 @@ docker compose up
 - `[data]`: data (weights) for the pipeline.  
 - `[config]`: configuration files for the pipeline.  
 - `[src]`: (additional) source code for the pipeline; used by the containers.  
+
+## License
+
+See attached LICENSE file.
+
+## Acknowledgements
+
+Development of parts of the software was supported by  
+- [iChores project](http://ichores.ciirc.cvut.cz/)  
+- [ROBOPROX project](https://www.roboprox.eu/)  Robotics and Advanced Industrial Production, Pr. no.: CZ.02.01.01/00/22_008/0004590
+
+## Authors
+
+List of authors can be found in the AUTHORS file.
+
+Additional credit to [YOLOv8](https://github.com/ultralytics/yolov8) and [GDRNet](https://github.com/shanice-l/gdrnpp_bop2022) projects.
+
+
+ 
+
+First version published in Dec 2025.
+
