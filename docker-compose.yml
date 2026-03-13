@@ -94,7 +94,6 @@ services:
       LIBGL_ALWAYS_INDIRECT: "1"
     volumes:
       - *common_volumes_x11
-      # (Fixed direction + made it read-only)
       - ./compose/r_melodic/entrypoint.sh:/entrypoint.sh:ro
       - ./src/r_melodic_ws:/tiago_dual_public_ws/src/user_packages
     working_dir: /tiago_dual_public_ws

@@ -49,6 +49,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && wget https://raw.githubusercontent.com/pal-robotics/tiago_dual_tutorials/master/tiago_dual_public-melodic.rosinstall \
   && vcs import src < tiago_dual_public-melodic.rosinstall
 
+RUN /bin/bash -c 'cd ${REPO_WS}/src/pal_msgs && git checkout 0.11.6'
+
 ARG ROSDEP_IGNORE="opencv2 opencv2-nonfree pal_laser_filters speed_limit_node sensor_to_cloud hokuyo_node libdw-dev python-graphitesend-pip python-statsd pal_filters pal_vo_server pal_usb_utils pal_pcl pal_pcl_points_throttle_and_filter pal_karto pal_local_joint_control camera_calibration_files pal_startup_msgs pal-orbbec-openni2 dummy_actuators_manager pal_local_planner gravity_compensation_controller current_limit_controller dynamic_footprint dynamixel_cpp tf_lookup opencv3 joint_impedance_trajectory_controller omni_drive_controller pal_moveit_plugins pal_moveit_capabilities ydlidar_ros_driver pal_loc_measure pal_map_manager pal_motion_loader"
 
 RUN apt-get update && rosdep install --from-paths src --ignore-src -y --rosdistro melodic --skip-keys="${ROSDEP_IGNORE}"
@@ -86,6 +88,7 @@ RUN apt-get -y update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 RUN bash -c "source /opt/ros/melodic/setup.bash \
+    && cd $REPO_WS \
     && catkin build -DCATKIN_ENABLE_TESTING=0 -j $(expr `nproc` / 2) \
     && echo 'source $REPO_WS/devel/setup.bash' >> ~/.bashrc"
 
