@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
 import rospy
 from object_detector_msgs.srv import detectron2_service_server, estimate_pointing_gesture, estimate_poses
-from robokudo_msgs.msg import GenericImgProcAnnotatorAction, GenericImgProcAnnotatorResult, GenericImgProcAnnotatorFeedback, GenericImgProcAnnotatorGoal
 import actionlib
 from sensor_msgs.msg import Image, RegionOfInterest
+
+from geometry_msgs.msg import Point
+from std_msgs.msg import ColorRGBA
 
 import tf
 import tf.transformations as tf_trans
@@ -44,10 +46,11 @@ class PoseCalculator:
             print("Service call failed: %s" % e)
 
     def estimate_object_poses(self, rgb, depth, detection):
-        rospy.wait_for_service('estimate_poses')
+        rospy.wait_for_service('find_graspposes_contact_graspnet')
         try:
-            estimate_poses_service = rospy.ServiceProxy('estimate_poses', estimate_poses)
+            estimate_poses_service = rospy.ServiceProxy('find_graspposes_contact_graspnet', estimate_poses)
             response = estimate_poses_service(detection, rgb, depth)
+            rospy.loginfo(f"RESPONSE: {response}")
             return response.poses
         except rospy.ServiceException as e:
             print("Service call failed: %s" % e)
@@ -77,37 +80,6 @@ class PoseCalculator:
 
         return grasps
 
-    # def publish_annotated_image(self, rgb, detections):
-    #     try:
-    #         cv_image = self.bridge.imgmsg_to_cv2(rgb, "bgr8")
-    #     except CvBridgeError as e:
-    #         rospy.logerr(e)
-    #         return
-
-    #     for detection in detections:
-    #         xmin = int(detection.bbox.ymin)
-    #         ymin = int(detection.bbox.xmin)
-    #         xmax = int(detection.bbox.ymax)
-    #         ymax = int(detection.bbox.xmax)
-
-    #         font_size = 1.0
-    #         line_size = 3
-
-    #         cv2.rectangle(cv_image, (xmin, ymin), (xmax, ymax), (0, 255, 0), line_size)
-
-    #         class_name = detection.name
-    #         score = detection.score
-    #         label = f"{class_name}: {score:.2f}"
-    #         cv2.putText(cv_image, label, (xmin, ymin - 20), cv2.FONT_HERSHEY_SIMPLEX, font_size, (0, 255, 0), line_size)
-
-    #     # Publish annotated image
-    #     annotated_image_msg = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
-    #     self.image_publisher.publish(annotated_image_msg)
-
-    #     # Display image for debugging
-    #     # cv2.imshow("Annotated Image", cv_image)
-    #     # cv2.waitKey(10)
-
     def publish_annotated_image(self, rgb, detections):
         try:
             cv_image = self.bridge.imgmsg_to_cv2(rgb, "bgr8")
@@ -120,10 +92,10 @@ class PoseCalculator:
         overlay = cv_image.copy()
 
         for detection in detections:
-            xmin = int(detection.bbox.ymin)
-            ymin = int(detection.bbox.xmin)
-            xmax = int(detection.bbox.ymax)
-            ymax = int(detection.bbox.xmax)
+            xmin = int(detection.bbox.xmin)
+            ymin = int(detection.bbox.ymin)
+            xmax = int(detection.bbox.xmax)
+            ymax = int(detection.bbox.ymax)
 
             font_size = 1.0
             line_size = 2
@@ -159,6 +131,54 @@ class PoseCalculator:
         # Publish annotated image
         annotated_image_msg = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
         self.image_publisher.publish(annotated_image_msg)
+
+    def publish_3dbbox_marker(self, size, quat, t_est, color=(0.0, 1.0, 0.0), frame_id=None):
+        """
+        Publishes a 3D bounding box as a wireframe marker in RViz.
+
+        Args:
+            size: geometry_msgs/Vector3 or (x, y, z) tuple in meters.
+            quat: (x, y, z, w) quaternion orientation.
+            t_est: (x, y, z) position in meters.
+            color: Optional RGBA tuple (default: green).
+            frame_id: Optional override for self.grasp_frame_id.
+        """
+
+        vis_pub = rospy.Publisher("/3dbbox_estimated", Marker, queue_size=1, latch=True)
+        marker = Marker()
+        marker.header.frame_id = self.color_frame_id
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "3dbbox"
+        marker.id = 0
+        marker.type = Marker.CUBE
+        marker.action = Marker.ADD
+
+        marker.pose.position.x = t_est[0]
+        marker.pose.position.y = t_est[1]
+        marker.pose.position.z = t_est[2]
+
+        marker.pose.orientation.x = quat[0]
+        marker.pose.orientation.y = quat[1]
+        marker.pose.orientation.z = quat[2]
+        marker.pose.orientation.w = quat[3]
+
+        # Set object size
+        if isinstance(size, tuple) or isinstance(size, np.ndarray):
+            marker.scale.x = size[0]
+            marker.scale.y = size[1]
+            marker.scale.z = size[2]
+        else:
+            marker.scale.x = size.x
+            marker.scale.y = size.y
+            marker.scale.z = size.z
+
+        # Set color
+        marker.color = ColorRGBA(r=color[0], g=color[1], b=color[2], a=0.3)
+
+        # marker.lifetime = rospy.Duration(0)  # 0 = forever
+
+        rospy.loginfo(f"Publishing 3D bounding box marker at {t_est} with size {size} and orientation {quat} in frame {marker.header.frame_id}")
+        vis_pub.publish(marker)
 
     def publish_mesh_marker(self, cls_name, quat, t_est):
         vis_pub = rospy.Publisher("/gdrnet_meshes_estimated", Marker, latch=True)
@@ -236,7 +256,6 @@ class PoseCalculator:
 
         marker_pub.publish(marker_array)
 
-
 # main of example script for iChores Pipeline
 # if you want to build your own rosnode, build it like this
 
@@ -282,11 +301,15 @@ if __name__ == "__main__":
 
                 try:
                     for detection in detections:
-                        if not detection.name == "036_wood_block":
-                            detection.name = "006_mustard_bottle"
-                            estimated_pose = pose_calculator.estimate_object_poses(rgb, depth, detection)[0]
-                            estimated_poses_camFrame.append(estimated_pose)
-                            object_names.append(detection.name)
+                        rospy.loginfo(f"Estimating pose for {detection.name} with bbox {detection.bbox}")
+                        estimated_pose = pose_calculator.estimate_object_poses(rgb, depth, detection)[0]
+                        # R = np.array([estimated_pose.pose.orientation.x, estimated_pose.pose.orientation.y,  estimated_pose.pose.orientation.z, estimated_pose.pose.orientation.w])
+                        # t = np.array([estimated_pose.pose.position.x, estimated_pose.pose.position.y, estimated_pose.pose.position.z])
+                        # size = np.array([estimated_pose.size.x, estimated_pose.size.y, estimated_pose.size.z])
+                        # pose_calculator.publish_3dbbox_marker(size, R, t)
+                        # estimated_poses_camFrame.append(estimated_pose)
+                        # object_names.append(detection.name)
+                        rospy.loginfo(f"Estimated pose for {detection.name}: {estimated_pose}")
 
                 except Exception as e:
                     rospy.logerr(f"{e}")
@@ -302,67 +325,67 @@ if __name__ == "__main__":
                 # here it is essential in which frame the estimated_poses are
                 # we are using the camera frame
 
-                grasp_tfs = None
-                if len(estimated_poses_camFrame) > 0:
-                    grasp_tfs = pose_calculator.load_grasps(object_names)
+                # grasp_tfs = None
+                # if len(estimated_poses_camFrame) > 0:
+                #     grasp_tfs = pose_calculator.load_grasps(object_names)
 
-                # transform grasps to camera frame (where object poses are)
-                estimated_grasps_camFrame = None
-                if len(estimated_poses_camFrame) > 0:
-                    estimated_grasps_camFrame = pose_calculator.transform_grasps(grasp_tfs, estimated_poses_camFrame)
+                # # transform grasps to camera frame (where object poses are)
+                # estimated_grasps_camFrame = None
+                # if len(estimated_poses_camFrame) > 0:
+                #     estimated_grasps_camFrame = pose_calculator.transform_grasps(grasp_tfs, estimated_poses_camFrame)
 
-                # ###############################
-                # BEWARE! the publish_grasp_marker function is only for visualization!
-                # thats why we use the grasps in the camera frame
+                # # ###############################
+                # # BEWARE! the publish_grasp_marker function is only for visualization!
+                # # thats why we use the grasps in the camera frame
 
-                if estimated_grasps_camFrame is not None:
-                    for grasp in estimated_grasps_camFrame:
-                        pose_calculator.publish_grasp_marker(grasp)
+                # if estimated_grasps_camFrame is not None:
+                #     for grasp in estimated_grasps_camFrame:
+                #         pose_calculator.publish_grasp_marker(grasp)
 
                 # ###############################
                 # POINTING GESTURE DETECTION EXAMPLE
                 # ###############################
 
-                print('Perform Pointing Detection...')
-                t0 = time.time()
-                joint_positions = pose_calculator.detect_pointing_gesture(rgb, depth)
-                time_pointing = time.time() - t0
-                print('... received pointing gesture.')
+                # print('Perform Pointing Detection...')
+                # t0 = time.time()
+                # joint_positions = pose_calculator.detect_pointing_gesture(rgb, depth)
+                # time_pointing = time.time() - t0
+                # print('... received pointing gesture.')
 
-                # New step: Check which object the human is pointing to
-                t0 = time.time()
-                #if len(estimated_poses_camFrame) > 0 and joint_positions is not None:
-                if len(estimated_poses_camFrame) > 0 and joint_positions is not None:
-                    elbow = joint_positions.elbow
-                    wrist = joint_positions.wrist
-                    min_distance = float('inf')
-                    pointed_object = None
-                    threshold = 0.3  # 0.5 meters
+                # # New step: Check which object the human is pointing to
+                # t0 = time.time()
+                # #if len(estimated_poses_camFrame) > 0 and joint_positions is not None:
+                # if len(estimated_poses_camFrame) > 0 and joint_positions is not None:
+                #     elbow = joint_positions.elbow
+                #     wrist = joint_positions.wrist
+                #     min_distance = float('inf')
+                #     pointed_object = None
+                #     threshold = 0.3  # 0.5 meters
 
-                    print(estimated_poses_camFrame)
+                #     print(estimated_poses_camFrame)
 
-                    pointed_object_pose = None
-                    for idx, estimated_pose in enumerate(estimated_poses_camFrame):
-                        object_position = estimated_pose.pose.position
-                        distance = calculate_distance_to_line(object_position, elbow, wrist)
-                        if distance < min_distance:
-                            min_distance = distance
-                            pointed_object = estimated_pose.name
-                            pointed_object_pose = estimated_pose.pose
+                #     pointed_object_pose = None
+                #     for idx, estimated_pose in enumerate(estimated_poses_camFrame):
+                #         object_position = estimated_pose.pose.position
+                #         distance = calculate_distance_to_line(object_position, elbow, wrist)
+                #         if distance < min_distance:
+                #             min_distance = distance
+                #             pointed_object = estimated_pose.name
+                #             pointed_object_pose = estimated_pose.pose
 
-                    if min_distance < threshold:
-                        R = np.array([pointed_object_pose.orientation.x, pointed_object_pose.orientation.y,  pointed_object_pose.orientation.z, pointed_object_pose.orientation.w])
-                        t = np.array([pointed_object_pose.position.x, pointed_object_pose.position.y, pointed_object_pose.position.z])
-                        pose_calculator.publish_mesh_marker(pointed_object, R, t)
-                        print(f"The human is pointing to the object: {pointed_object}")
-                        print()
+                #     if min_distance < threshold:
+                #         R = np.array([pointed_object_pose.orientation.x, pointed_object_pose.orientation.y,  pointed_object_pose.orientation.z, pointed_object_pose.orientation.w])
+                #         t = np.array([pointed_object_pose.position.x, pointed_object_pose.position.y, pointed_object_pose.position.z])
+                #         pose_calculator.publish_mesh_marker(pointed_object, R, t)
+                #         print(f"The human is pointing to the object: {pointed_object}")
+                #         print()
 
-                time_point_checker = time.time() - t0
-                # Print the timed periods
-                print(f"Time for object detection: {time_detections:.2f} seconds")
-                print(f"Time for pointing detection: {time_pointing:.2f} seconds")
-                print(f"Time for object pose estimation: {time_object_poses:.2f} seconds")
-                print(f"Time for pointing checker: {time_point_checker:.2f} seconds")
+                # time_point_checker = time.time() - t0
+                # # Print the timed periods
+                # print(f"Time for object detection: {time_detections:.2f} seconds")
+                # print(f"Time for pointing detection: {time_pointing:.2f} seconds")
+                # print(f"Time for object pose estimation: {time_object_poses:.2f} seconds")
+                # print(f"Time for pointing checker: {time_point_checker:.2f} seconds")
                 print()
                 rate.sleep()
 
