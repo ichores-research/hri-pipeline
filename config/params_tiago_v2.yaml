@@ -2,8 +2,8 @@
 im_width: 640
 im_height: 480
 intrinsics:
-- [511.23941992900706, 0.0, 323.8860613468399]
-- [0.0, 509.20165082252123, 226.7714318838691]
+- [524.6171845327827, 0.0, 325.0472812770786]
+- [0.0, 524.3625286668592, 250.6653254010994]
 - [0.0, 0.0, 1.0]
 
 # Topics
@@ -14,4 +14,4 @@ depth_scale: 1       # 1000 -> depth map encoded in millimeters; 1 -> depth scal
 
 # Frame ids
 color_frame_id: xtion_rgb_optical_frame
-grasp_frame_id: gripper_link # its "gripper_link" for tiago and "hand_palm_link" for HSR
+grasp_frame_id: gripper_right_link # its "gripper_link" for tiago and "hand_palm_link" for HSR
