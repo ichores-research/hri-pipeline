@@ -32,11 +32,9 @@ services:
       - ./compose/detection_pipe:/root/task
       - ./config:/root/config
       - ./data/datasets:/root/task/datasets:rw
-    command: >
-      bash -lc "source catkin_ws/devel/setup.bash;
-      rosparam load /root/config/${CONFIG} /pose_estimator;
-      python /root/task/test_obj_det_dev.py"
-
+    command: bash -c "source catkin_ws/devel/setup.bash;
+                      rosparam load /root/config/${CONFIG} /pose_estimator;
+                      python /root/task/test_obj_det_dev_grasp_predictor.py"
   yolo:
     <<: *common_runtime
     image: yolo
@@ -55,6 +53,7 @@ services:
       <<: *common_env
       DATASET: ${DATASET}
     command: bash -c "source catkin_ws/devel/setup.bash;
+                      python -m pip install dill;
                       python ./yolo/detect_ros_seg_service.py --conf-thres 0.85 --weights ./yolo/weights/${DATASET}.pt --camera-topic '$$(rosparam get /pose_estimator/color_topic)'"
 
   gdrnpp:
