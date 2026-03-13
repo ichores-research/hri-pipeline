@@ -1,5 +1,3 @@
-version: "2.4"
-
 x-common-env: &common_env
   ROS_IP: ${ROS_IP:-127.0.0.1}
   ROS_MASTER_URI: ${ROS_MASTER_URI:-http://127.0.0.1:11311}
@@ -38,6 +36,26 @@ services:
       bash -lc "source catkin_ws/devel/setup.bash;
       rosparam load /root/config/${CONFIG} /pose_estimator;
       python /root/task/test_obj_det_dev.py"
+
+  yolo:
+    <<: *common_runtime
+    image: yolo
+    build:
+      context: .
+      dockerfile: /yolov8_ros/docker/dockerfile_ros
+    network_mode: "host"
+    runtime: "nvidia"
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - *common_volumes_x11
+      - "./yolov8_ros:/root/yolo:rw"
+      - "./data/weights/yolov8:/root/yolo/weights:rw"
+      - ./config:/root/config
+    environment:
+      <<: *common_env
+      DATASET: ${DATASET}
+    command: bash -c "source catkin_ws/devel/setup.bash;
+                      python ./yolo/detect_ros_seg_service.py --conf-thres 0.85 --weights ./yolo/weights/${DATASET}.pt --camera-topic '$$(rosparam get /pose_estimator/color_topic)'"
 
   melodic_bridge:
     <<: *common_runtime
